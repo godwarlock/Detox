@@ -9,7 +9,11 @@ if (isDarwin && shouldInstallDetox) {
   const execFileSync = require('child_process').execFileSync;
 
   execFileSync(`${__dirname}/build_local_framework.ios.sh`, { stdio: 'inherit' });
-  execFileSync(`${__dirname}/build_local_xcuitest.ios.sh`, { stdio: 'inherit' });
+  try {
+    execFileSync(`${__dirname}/build_local_xcuitest.ios.sh`, { stdio: 'inherit' });
+  } catch (e) {
+    console.warn('[Detox] XCUITest runner build failed, but RN bridge tests will still work:', e.message);
+  }
 }
 
 patchGradleByRNVersion();
