@@ -8,6 +8,7 @@
     "detox-native",
     "Detox-android",
     "Detox-ios-*.tbz",
+    "ios",
     "local-cli",
     "runners",
     "scripts",
