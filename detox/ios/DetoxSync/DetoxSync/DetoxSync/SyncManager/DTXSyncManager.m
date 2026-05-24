@@ -186,6 +186,15 @@ static atomic_nstimeinterval _maximumAnimationDuration = ATOMIC_VAR_INIT(1.0);
 		__detox_sync_enableVerboseSyncResourceLogging = [NSUserDefaults.standardUserDefaults boolForKey:@"DTXEnableVerboseSyncResources"];
 		_enableVerboseSystemLogging = [NSUserDefaults.standardUserDefaults boolForKey:@"DTXEnableVerboseSyncSystem"];
 
+		// 多引擎诊断：也读环境变量。launchArgs → NSUserDefaults 路径有时不起作用，
+		// 环境变量更可靠（通过 SIMCTL_CHILD_DTXEnableVerboseSyncResources=1 传入）。
+		if(!__detox_sync_enableVerboseSyncResourceLogging) {
+			const char* envVal = getenv("DTXEnableVerboseSyncResources");
+			if(envVal && (strcmp(envVal, "1") == 0 || strcasecmp(envVal, "YES") == 0)) {
+				__detox_sync_enableVerboseSyncResourceLogging = YES;
+			}
+		}
+
 		__detox_sync_orig_dispatch_sync = dlsym(RTLD_DEFAULT, "dispatch_sync");
 		__detox_sync_orig_dispatch_async = dlsym(RTLD_DEFAULT, "dispatch_async");
 		__detox_sync_orig_dispatch_after = dlsym(RTLD_DEFAULT, "dispatch_after");

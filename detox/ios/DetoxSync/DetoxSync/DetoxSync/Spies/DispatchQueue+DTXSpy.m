@@ -43,12 +43,38 @@ void __detox_sync_dispatch_wrapper(void (*func)(dispatch_queue_t param1, dispatc
 	dispatch_block_t param2 = copy ? [_param2 copy] : (id)_param2;
 
 	DTXDispatchQueueSyncResource* sr = [DTXDispatchQueueSyncResource _existingSyncResourceWithQueue:param1];
+
+	// Multi-engine debugging: when verbose sync logging is enabled, capture
+	// the caller's stack frame so it's possible to see which module is
+	// flooding the main queue with work items.
+	//
+	// Output goes to stderr (NOT os_log) for two reasons:
+	//   1. os_log truncates multi-line strings and aggressively rate-limits.
+	//   2. fprintf with a unique prefix ("[DTXMQ]") is trivial to grep in
+	//      `xcrun simctl spawn booted log stream` output.
+	//
+	// NOTE: this file is compiled with -fno-objc-arc.
+	if(__detox_sync_enableVerboseSyncResourceLogging && param1 == dispatch_get_main_queue())
+	{
+		@autoreleasepool {
+			NSArray* stack = [NSThread callStackSymbols];
+			NSUInteger start = MIN([stack count], (NSUInteger)2);
+			NSUInteger end = MIN([stack count], start + 6);
+			fprintf(stderr, "[DTXMQ] dispatch on main queue (%s)\n", [name UTF8String]);
+			for(NSUInteger i = start; i < end; i++)
+			{
+				NSString* frame = [stack objectAtIndex:i];
+				fprintf(stderr, "[DTXMQ]   %lu %s\n", (unsigned long)(i - start), [frame UTF8String]);
+			}
+		}
+	}
+
 	NSString* identifier = [sr addWorkBlock:param2 operation:name moreInfo:nil];
-	
+
 	func(param1, ^ {
 		param2();
 		[sr removeWorkBlock:param2 operation:name identifier:identifier];
-		
+
 		if(copy == YES)
 		{
 			[param2 release];
